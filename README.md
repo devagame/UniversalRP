@@ -15,6 +15,15 @@
 
 ![](README/01.png)
 
+* 将 Graphics / Always Included Shaders / UI/Default => 修改为 URP下的 UI/Default
+* 每次切换需要清理 Unity 缓存 (Library) 重启 Unity 才会生效...
+
+![](README/02.png)
+
+### Screenshot
+
+![](README/03.png)
+
 ### Test:
 
 | 测试平台 | 系统版本 | 主流机型 | 测试通过 |
