@@ -17,6 +17,7 @@
 
 * 将 Graphics / Always Included Shaders / UI/Default => 修改为 URP下的 UI/Default
 * 每次切换需要清理 Unity 缓存 (Library) 重启 Unity 才会生效...
+* UI图片无需再勾掉 sRGB 默认即可.
 
 ![](README/02.png)
 
