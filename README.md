@@ -20,7 +20,7 @@
 
 ![](README/02.png)
 
-### Screenshot
+### Screenshot:
 
 ![](README/03.png)
 
