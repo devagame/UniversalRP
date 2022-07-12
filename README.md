@@ -2,7 +2,7 @@
 
 # [![Build](https://github.com/penrose/penrose/actions/workflows/build.yml/badge.svg)](https://github.com/devagame/UniversalRP/actions/workflows/blank.yml)  [![Author](https://img.shields.io/badge/Unity-2021.3.1f1+-blue.svg "")](https://github.com/devagame/ "") [![Author](https://img.shields.io/badge/UniversalRP-12.1.6+-blue.svg "")](https://github.com/devagame/ "") [![license](https://img.shields.io/github/license/devagame/universalrp)](LICENSE)
 
-## 此项目方案作者: [Killop(夜莺)]( https://github.com/killop)
+## 项目方案作者: [Killop(夜莺)]( https://github.com/killop)
 
 本项目是 UniversalRP 的扩展库 修复线性空间中的 UI 透明度差异问题 能够让 UI 设计师在 Unity 中保持原有的 sRBG 工作流.
 
@@ -14,3 +14,12 @@
 * Forward Renderer Data => Transparent Layer Mask 勾选 Everything (暂定)
 
 ![](README/01.png)
+
+### Test:
+
+| 测试平台 | 系统版本 | 主流机型 | 测试通过 |
+| ------------ | ------------ | ------------ | ------------ |
+| Android	  | 8 => 12  | ... | ... |
+| Windows	  | 10 => 11  | ... | ... |
+| Apple iPhone | 15 => 16  | ... | ... |
+| Apple Mac |  12.4  | ... | ... |
