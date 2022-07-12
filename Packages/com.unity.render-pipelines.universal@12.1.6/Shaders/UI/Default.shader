@@ -46,7 +46,7 @@ Shader "UI/Default"
 
         Pass
         {
-            Name "URP_UI_Default"
+            Name "Default"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment pixel
