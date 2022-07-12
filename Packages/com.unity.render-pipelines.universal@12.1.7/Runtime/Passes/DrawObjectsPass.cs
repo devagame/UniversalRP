@@ -18,6 +18,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         string m_ProfilerTag;
         ProfilingSampler m_ProfilingSampler;
         bool m_IsOpaque;
+        bool m_IsUICamera; // Add By: XGAME
 
         bool m_UseDepthPriming;
 
@@ -43,6 +44,13 @@ namespace UnityEngine.Rendering.Universal.Internal
                 m_RenderStateBlock.stencilState = stencilState;
             }
         }
+        
+        // Add By: XGAME
+        public void Setup(bool isUICamera = false)
+        {
+            m_IsUICamera = isUICamera;
+        }
+        // End Add
 
         public DrawObjectsPass(string profilerTag, bool opaque, RenderPassEvent evt, RenderQueueRange renderQueueRange, LayerMask layerMask, StencilState stencilState, int stencilReference)
             : this(profilerTag,
@@ -83,6 +91,9 @@ namespace UnityEngine.Rendering.Universal.Internal
                 // w is used for knowing whether the object is opaque(1) or alpha blended(0)
                 Vector4 drawObjectPassData = new Vector4(0.0f, 0.0f, 0.0f, (m_IsOpaque) ? 1.0f : 0.0f);
                 cmd.SetGlobalVector(s_DrawObjectPassDataPropID, drawObjectPassData);
+
+                // Add By: XGAME
+                cmd.SetGlobalFloat(ShaderPropertyId.isInUICamera, m_IsUICamera ? 1 : 0);
 
                 // scaleBias.x = flipSign
                 // scaleBias.y = scale

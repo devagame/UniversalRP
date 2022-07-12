@@ -11,7 +11,8 @@ namespace UnityEngine.Rendering.Universal.Internal
     {
         RenderTargetIdentifier m_Source;
         Material m_BlitMaterial;
-
+        bool m_IsLine = true;  // Add By: XGAME
+        
         public FinalBlitPass(RenderPassEvent evt, Material blitMaterial)
         {
             base.profilingSampler = new ProfilingSampler(nameof(FinalBlitPass));
@@ -26,9 +27,10 @@ namespace UnityEngine.Rendering.Universal.Internal
         /// </summary>
         /// <param name="baseDescriptor"></param>
         /// <param name="colorHandle"></param>
-        public void Setup(RenderTextureDescriptor baseDescriptor, RenderTargetHandle colorHandle)
+        public void Setup(RenderTextureDescriptor baseDescriptor, RenderTargetHandle colorHandle, bool isLine = true)  // Add By: XGAME
         {
             m_Source = colorHandle.id;
+            m_IsLine = isLine;  // Add By: XGAME
         }
 
         /// <inheritdoc/>
@@ -57,8 +59,22 @@ namespace UnityEngine.Rendering.Universal.Internal
             {
                 GetActiveDebugHandler(renderingData)?.UpdateShaderGlobalPropertiesForFinalValidationPass(cmd, ref cameraData, true);
 
-                CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.LinearToSRGBConversion,
-                    cameraData.requireSrgbConversion);
+                // Add By: XGAME
+                //CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.LinearToSRGBConversion,
+                //    cameraData.requireSrgbConversion);
+                if (m_IsLine)
+                {
+                    CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.SRGBToLinearConversion, false);
+                    CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.LinearToSRGBConversion,
+                        cameraData.requireSrgbConversion);
+                }
+                else
+                {
+                    CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.SRGBToLinearConversion, true);
+                    CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.LinearToSRGBConversion,
+                        cameraData.requireSrgbConversion);
+                }
+                // End Add
 
                 cmd.SetGlobalTexture(ShaderPropertyId.sourceTex, m_Source);
 

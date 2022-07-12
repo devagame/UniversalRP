@@ -39,6 +39,18 @@ namespace UnityEngine.Rendering.Universal.Internal
         {
             return backBuffer.rt;
         }
+        
+        // Add By: XGAME
+        public RenderTargetHandle GetFrontBuffer()
+        {
+            return frontBuffer.rt;
+        }
+        
+        public static RenderTextureDescriptor GetDesc()
+        {
+            return m_Desc;
+        }
+        // End Add
 
         public RenderTargetHandle GetBackBuffer(CommandBuffer cmd)
         {
@@ -130,6 +142,25 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_Desc = desc;
             m_FilterMode = filterMode;
         }
+   
+        // Add By: XGAME
+        public void ReSizeFrontBuffer(CommandBuffer cmd, int width,int height)
+        {
+            cmd.ReleaseTemporaryRT(frontBuffer.name);
+            var tempDes = m_Desc;
+            tempDes.width = width;
+            tempDes.height = height;
+            cmd.GetTemporaryRT(frontBuffer.name, tempDes, m_FilterMode);
+        }
+        
+        public void ReSizeBackBufferAndSave(CommandBuffer cmd, int width, int height)
+        {
+            cmd.ReleaseTemporaryRT(backBuffer.name);
+            m_Desc.width = width;
+            m_Desc.height = height;
+            cmd.GetTemporaryRT(backBuffer.name, m_Desc, m_FilterMode);
+        }
+        // End Add
 
         public RenderTargetHandle GetBufferA()
         {
