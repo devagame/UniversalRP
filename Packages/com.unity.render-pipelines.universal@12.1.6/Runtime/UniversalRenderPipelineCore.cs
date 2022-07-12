@@ -150,6 +150,8 @@ namespace UnityEngine.Rendering.Universal
         public bool isHdrEnabled;
         public bool requiresDepthTexture;
         public bool requiresOpaqueTexture;
+        public bool nextIsUICamera;  // Add By: XGAME
+        public bool isUICamera;  // Add By: XGAME
 
         /// <summary>
         /// Returns true if post processing passes require depth texture.
@@ -361,6 +363,7 @@ namespace UnityEngine.Rendering.Universal
 
         // Required for 2D Unlit Shadergraph master node as it doesn't currently support hidden properties.
         public static readonly int rendererColor = Shader.PropertyToID("_RendererColor");
+        public static readonly int isInUICamera = Shader.PropertyToID("_IsInUICamera"); // Add By: XGAME
     }
 
     public struct PostProcessingData
@@ -399,6 +402,7 @@ namespace UnityEngine.Rendering.Universal
         public static readonly string DepthMsaa4 = "_DEPTH_MSAA_4";
         public static readonly string DepthMsaa8 = "_DEPTH_MSAA_8";
 
+        public static readonly string SRGBToLinearConversion = "_SRGB_TO_LINEAR_CONVERSION"; // Add By: XGAME
         public static readonly string LinearToSRGBConversion = "_LINEAR_TO_SRGB_CONVERSION";
         internal static readonly string UseFastSRGBLinearConversion = "_USE_FAST_SRGB_LINEAR_CONVERSION";
 
@@ -876,6 +880,7 @@ namespace UnityEngine.Rendering.Universal
         CopyDepth,
         DepthNormalPrepass,
         DepthPrepass,
+        Bilt,  // Add By: XGAME
 
         // DrawObjectsPass
         DrawOpaqueObjects,

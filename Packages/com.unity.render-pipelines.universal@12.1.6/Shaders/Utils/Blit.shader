@@ -16,6 +16,7 @@ Shader "Hidden/Universal Render Pipeline/Blit"
             #pragma vertex FullscreenVert
             #pragma fragment Fragment
             #pragma multi_compile_fragment _ _LINEAR_TO_SRGB_CONVERSION
+            #pragma multi_compile_fragment _ _SRGB_TO_LINEAR_CONVERSION   // Add By: XGAME
             #pragma multi_compile _ _USE_DRAW_PROCEDURAL
             #pragma multi_compile_fragment _ DEBUG_DISPLAY
 
@@ -33,8 +34,14 @@ Shader "Hidden/Universal Render Pipeline/Blit"
 
                 half4 col = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_SourceTex, uv);
 
+                // Add By: XGAME
+				#ifdef _SRGB_TO_LINEAR_CONVERSION
+					col = SRGBToLinear(col);
+				#endif
+                // End Add
+                
                 #ifdef _LINEAR_TO_SRGB_CONVERSION
-                col = LinearToSRGB(col);
+                    col = LinearToSRGB(col);
                 #endif
 
                 #if defined(DEBUG_DISPLAY)

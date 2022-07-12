@@ -42,6 +42,11 @@ namespace UnityEngine.Rendering.Universal
             private const string k_Name = nameof(UniversalRenderer);
             public static readonly ProfilingSampler createCameraRenderTarget = new ProfilingSampler($"{k_Name}.{nameof(CreateCameraRenderTarget)}");
         }
+        
+        // Add By: XGAME
+        public static bool s_UISplitEnable = true;
+        public static bool s_IsGammaCorrectEnable = true;
+        // End Add
 
         /// <inheritdoc/>
         public override int SupportedCameraStackingTypes()
@@ -91,6 +96,7 @@ namespace UnityEngine.Rendering.Universal
         TransparentSettingsPass m_TransparentSettingsPass;
         DrawObjectsPass m_RenderTransparentForwardPass;
         InvokeOnRenderObjectCallbackPass m_OnRenderObjectCallbackPass;
+        BlitPass m_BlitPass; // Add By: XGAME
         FinalBlitPass m_FinalBlitPass;
         CapturePass m_CapturePass;
 #if ENABLE_VR && ENABLE_XR_MODULE
@@ -270,6 +276,9 @@ namespace UnityEngine.Rendering.Universal
             m_OnRenderObjectCallbackPass = new InvokeOnRenderObjectCallbackPass(RenderPassEvent.BeforeRenderingPostProcessing);
 
             m_PostProcessPasses = new PostProcessPasses(data.postProcessData, m_BlitMaterial);
+            
+            // Add By: XGAME
+            m_BlitPass = new BlitPass(RenderPassEvent.AfterRenderingPostProcessing + 1, m_BlitMaterial);
 
             m_CapturePass = new CapturePass(RenderPassEvent.AfterRendering);
             m_FinalBlitPass = new FinalBlitPass(RenderPassEvent.AfterRendering + 1, m_BlitMaterial);
@@ -402,6 +411,7 @@ namespace UnityEngine.Rendering.Universal
                 if (!needTransparencyPass)
                     return;
 #endif
+                m_RenderTransparentForwardPass.Setup(IsGammaCorrectEnable(ref cameraData)); // Add By: XGAME
                 EnqueuePass(m_RenderTransparentForwardPass);
                 return;
             }
@@ -779,6 +789,7 @@ namespace UnityEngine.Rendering.Universal
 
                 m_RenderTransparentForwardPass.ConfigureColorStoreAction(transparentPassColorStoreAction);
                 m_RenderTransparentForwardPass.ConfigureDepthStoreAction(transparentPassDepthStoreAction);
+                m_RenderTransparentForwardPass.Setup(IsGammaCorrectEnable(ref cameraData)); // Add By: XGAME
                 EnqueuePass(m_RenderTransparentForwardPass);
             }
             EnqueuePass(m_OnRenderObjectCallbackPass);
@@ -801,6 +812,16 @@ namespace UnityEngine.Rendering.Universal
             if (lastCameraInTheStack)
             {
                 SetupFinalPassDebug(ref cameraData);
+                
+                // Add By: XGAME
+                bool isLine = true;
+                if (s_UISplitEnable && IsGammaCorrectEnable(ref cameraData))
+                {
+                    applyPostProcessing = false;
+                    applyFinalPostProcessing = false;
+                    isLine = false;
+                }
+                // End Add
 
                 // Post-processing will resolve to final target. No need for final blit pass.
                 if (applyPostProcessing)
@@ -839,7 +860,7 @@ namespace UnityEngine.Rendering.Universal
                 // We need final blit to resolve to screen
                 if (!cameraTargetResolved)
                 {
-                    m_FinalBlitPass.Setup(cameraTargetDescriptor, sourceForFinalPass);
+                    m_FinalBlitPass.Setup(cameraTargetDescriptor, sourceForFinalPass, isLine);  // Add By: XGAME
                     EnqueuePass(m_FinalBlitPass);
                 }
 
@@ -863,7 +884,32 @@ namespace UnityEngine.Rendering.Universal
             {
                 postProcessPass.Setup(cameraTargetDescriptor, m_ActiveCameraColorAttachment, false, m_ActiveCameraDepthAttachment, colorGradingLut, false, false, true);
                 EnqueuePass(postProcessPass);
+                
+                // Add By: XGAME
+                if (s_UISplitEnable && cameraData.nextIsUICamera)
+                {
+                    applyFinalPostProcessing =
+                        ((renderingData.cameraData.antialiasing == AntialiasingMode.FastApproximateAntialiasing) ||
+                         ((renderingData.cameraData.imageScalingMode == ImageScalingMode.Upscaling) && (renderingData.cameraData.upscalingFilter != ImageUpscalingFilter.Linear)));
+                    if (applyFinalPostProcessing)
+                    {
+                        var sourceForFinalPass = m_ActiveCameraColorAttachment;
+                        finalPostProcessPass.SetupFinalPass(sourceForFinalPass, true, false, false,true);
+                        EnqueuePass(finalPostProcessPass);
+                    }
+                    m_BlitPass.Setup(Screen.width, Screen.height, BlitPass.BlitColorTransform.Line2Gamma);
+                    EnqueuePass(m_BlitPass);
+                }
             }
+            else
+            {
+                if (s_UISplitEnable && cameraData.nextIsUICamera)
+                {
+                    m_BlitPass.Setup(Screen.width, Screen.height, BlitPass.BlitColorTransform.Line2Gamma);
+                    EnqueuePass(m_BlitPass);
+                }
+            }
+            // End Add
 
 #if UNITY_EDITOR
             if (isSceneViewCamera || (isGizmosEnabled && lastCameraInTheStack))
@@ -1087,7 +1133,37 @@ namespace UnityEngine.Rendering.Universal
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
+        
+        // Add By: XGAME
+        public void ResizeDepth(CommandBuffer cmd, ref RenderTextureDescriptor descriptor,int width,int height)
+        {
+            if (m_ActiveCameraDepthAttachment != RenderTargetHandle.CameraTarget)
+            {
+                cmd.ReleaseTemporaryRT(m_ActiveCameraDepthAttachment.id);
+                var depthDescriptor = descriptor;
+                depthDescriptor.useMipMap = false;
+                depthDescriptor.autoGenerateMips = false;
+                depthDescriptor.width = width;
+                depthDescriptor.height = height;
+                depthDescriptor.bindMS = depthDescriptor.msaaSamples > 1 && (SystemInfo.supportsMultisampledTextures != 0);
 
+                // binding MS surfaces is not supported by the GLES backend, and it won't be fixed after investigating
+                // the high performance impact of potential fixes, which would make it more expensive than depth prepass (fogbugz 1339401 for more info)
+                if (IsGLESDevice())
+                    depthDescriptor.bindMS = false;
+
+                depthDescriptor.colorFormat = RenderTextureFormat.Depth;
+                depthDescriptor.depthBufferBits = k_DepthStencilBufferBits;
+                cmd.GetTemporaryRT(m_ActiveCameraDepthAttachment.id, depthDescriptor, FilterMode.Point);
+            }
+        }
+
+        public bool IsGammaCorrectEnable(ref CameraData cameraData)
+        {
+            return s_UISplitEnable && s_IsGammaCorrectEnable && cameraData.isUICamera;
+        }
+        // End Add
+        
         bool PlatformRequiresExplicitMsaaResolve()
         {
 #if UNITY_EDITOR

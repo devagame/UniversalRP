@@ -569,6 +569,22 @@ namespace UnityEngine.Rendering.Universal
             if (asset.useAdaptivePerformance)
                 ApplyAdaptivePerformance(ref baseCameraData);
 #endif
+            // Add By: XGAME   
+            bool  baseCameraNextIsUICamera = false;
+            if (isStackedRendering)
+            {
+                var nextCamera = cameraStack[0];
+                if (nextCamera.isActiveAndEnabled)
+                {
+                    if (nextCamera.CompareTag("UICamera"))
+                    {
+                        baseCameraNextIsUICamera = true;
+                    }
+                }
+            }
+            baseCameraData.nextIsUICamera = baseCameraNextIsUICamera;
+            // End Add
+                
             RenderSingleCamera(context, baseCameraData, anyPostProcessingEnabled);
             using (new ProfilingScope(null, Profiling.Pipeline.endCameraRendering))
             {
@@ -593,6 +609,23 @@ namespace UnityEngine.Rendering.Universal
                     {
                         // Copy base settings from base camera data and initialize initialize remaining specific settings for this camera type.
                         CameraData overlayCameraData = baseCameraData;
+                        
+                        // Add By: XGAME
+                        bool nextIsUICamera = false;
+                          
+                        var nextIndex = i + 1;
+                        if (nextIndex < cameraStack.Count)
+                        {
+                            var nextCamera = cameraStack[nextIndex];
+                            if (nextCamera.CompareTag("UICamera"))
+                            {
+                                nextIsUICamera = true;
+                            }
+                        }
+                        overlayCameraData.nextIsUICamera = nextIsUICamera;
+                        overlayCameraData.isUICamera = currCamera.CompareTag("UICamera");
+                        // End Add
+                        
                         bool lastCamera = i == lastActiveOverlayCameraIndex;
 
 #if ENABLE_VR && ENABLE_XR_MODULE

@@ -25,6 +25,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         RenderTargetHandle m_Destination;
         RenderTargetHandle m_Depth;
         RenderTargetHandle m_InternalLut;
+        bool m_FinalPassUseRenderColorBuff = false;  // Add By: XGAME
 
         const string k_RenderPostProcessingTag = "Render PostProcessing Effects";
         const string k_RenderFinalPostProcessingTag = "Render Final PostProcessing Pass";
@@ -177,16 +178,22 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_hasExternalPostPasses = hasExternalPostPasses;
         }
 
-        public void SetupFinalPass(in RenderTargetHandle source, bool useSwapBuffer = false, bool hasExternalPostPasses = true)
+        // Add By: XGAME
+        public void SetupFinalPass(in RenderTargetHandle source, bool useSwapBuffer = false, 
+            bool hasExternalPostPasses = true,
+            bool enableSRGBConversion = true,
+            bool useRenderColorBuff = false)
         {
             m_Source = source.id;
             m_Destination = RenderTargetHandle.CameraTarget;
             m_IsFinalPass = true;
             m_HasFinalPass = false;
-            m_EnableSRGBConversionIfNeeded = true;
+            m_EnableSRGBConversionIfNeeded = enableSRGBConversion;
             m_UseSwapBuffer = useSwapBuffer;
             m_hasExternalPostPasses = hasExternalPostPasses;
+            m_FinalPassUseRenderColorBuff = useRenderColorBuff;
         }
+        // End Add
 
         /// <inheritdoc/>
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
@@ -199,7 +206,12 @@ namespace UnityEngine.Rendering.Universal.Internal
             // If RenderTargetHandle already has a valid internal render target identifier, we shouldn't request a temp
             if (m_Destination.HasInternalRenderTargetId())
                 return;
-
+            
+            // Add By: XGAME
+            if (m_FinalPassUseRenderColorBuff) 
+                return;
+            // End Add
+            
             var desc = GetCompatibleDescriptor();
             desc.depthBufferBits = 0;
             cmd.GetTemporaryRT(m_Destination.id, desc, FilterMode.Point);
@@ -1408,6 +1420,18 @@ namespace UnityEngine.Rendering.Universal.Internal
             {
                 m_Source = cameraData.renderer.cameraColorTarget;
             }
+            
+            // Add By: XGAME
+            if (m_FinalPassUseRenderColorBuff)
+            {
+                if (renderingData.cameraData.renderer is not UniversalRenderer renderer)
+                    return;
+                
+                var colorBuffer = renderer.m_ColorBufferSystem;
+                m_Source = colorBuffer.GetBackBuffer().id;
+                m_Destination = colorBuffer.GetFrontBuffer();
+            }
+            // End Add
 
             cmd.SetGlobalTexture(ShaderPropertyId.sourceTex, m_Source);
 
@@ -1566,8 +1590,25 @@ namespace UnityEngine.Rendering.Universal.Internal
             {
                 // Note: We need to get the cameraData.targetTexture as this will get the targetTexture of the camera stack.
                 // Overlay cameras need to output to the target described in the base camera while doing camera stack.
-                RenderTargetIdentifier cameraTarget = (cameraData.targetTexture != null) ? new RenderTargetIdentifier(cameraData.targetTexture) : cameraTargetHandle.Identifier();
+                
+                // Add By: XGAME
+                //RenderTargetIdentifier cameraTarget = (cameraData.targetTexture != null) ? new RenderTargetIdentifier(cameraData.targetTexture) : cameraTargetHandle.Identifier();
+                RenderTargetIdentifier cameraTarget;
+                if (m_FinalPassUseRenderColorBuff)
+                {
+                    if (renderingData.cameraData.renderer is not UniversalRenderer renderer)
+                        return;
 
+                    var colorBuffer = renderer.m_ColorBufferSystem;
+                    m_Destination = colorBuffer.GetFrontBuffer();
+                    cameraTarget = m_Destination.id;
+                }
+                else
+                {
+                    cameraTarget = (cameraData.targetTexture != null) ? new RenderTargetIdentifier(cameraData.targetTexture) : cameraTargetHandle.Identifier();
+                }
+                // End Add
+                
                 cmd.SetRenderTarget(cameraTarget, colorLoadAction, RenderBufferStoreAction.Store, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.DontCare);
                 cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
                 cmd.SetViewport(cameraData.pixelRect);
@@ -1575,6 +1616,13 @@ namespace UnityEngine.Rendering.Universal.Internal
                 cmd.SetViewProjectionMatrices(cameraData.camera.worldToCameraMatrix, cameraData.camera.projectionMatrix);
                 cameraData.renderer.ConfigureCameraTarget(cameraTarget, cameraTarget);
             }
+
+            // Add By: XGAME
+            if (m_FinalPassUseRenderColorBuff)
+            {
+                cameraData.renderer.SwapColorBuffer(cmd);
+            }
+            // End Add
 
             if (isUpscaledTextureUsed)
             {
