@@ -45,7 +45,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_Height = height;
             m_BlitColorTransform = blitColorTransform;
         }
-        
+
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             if (m_BlitMaterial == null)
@@ -59,7 +59,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             CommandBuffer cmd = CommandBufferPool.Get();
             if (renderingData.cameraData.renderer is not UniversalRenderer renderer)
                 return;
-            
+
             var colorBuffer = renderer.m_ColorBufferSystem;
             var renderTextureDescriptor = RenderTargetBufferSystem.GetDesc();
             bool needChangeSize = renderTextureDescriptor.width != m_Width ||
@@ -83,7 +83,10 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             RenderTargetIdentifier source;
             source = renderingData.cameraData.renderer.cameraColorTarget;
-            RenderingUtils.Blit(cmd, source, colorBuffer.GetFrontBuffer().id, m_BlitMaterial, 0, useDrawProceduleBlit);
+            RenderingUtils.Blit(cmd, source, colorBuffer.GetFrontBuffer().id, 
+                m_BlitMaterial, 0, useDrawProceduleBlit, RenderBufferLoadAction.DontCare, 
+                RenderBufferStoreAction.Store, RenderBufferLoadAction.DontCare,
+                RenderBufferStoreAction.DontCare);
             CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.LinearToSRGBConversion, false);
             CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.SRGBToLinearConversion, false);
             if (needChangeSize)
@@ -93,7 +96,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
 
             renderer.SwapColorBuffer(cmd);
-            
+
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
